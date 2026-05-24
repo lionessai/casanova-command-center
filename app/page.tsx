@@ -10,13 +10,9 @@ interface Message {
 }
 
 export default function CasanovaCommandCenter() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: "Hey Dorothea — Casanova online. I have full visibility into your Make.com scenarios and ClickUp workspace.\n\nTell me what you need: run a status check, troubleshoot a failing scenario, build something new, or track tasks. I'm ready to work.",
-    },
-  ]);
+  const WELCOME = "Hey Dorothea — Casanova online. I have full visibility into your Make.com scenarios and ClickUp workspace.\n\nTell me what you need: run a status check, troubleshoot a failing scenario, build something new, or track tasks. I'm ready to work.";
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionId] = useState(() => {
@@ -29,6 +25,30 @@ export default function CasanovaCommandCenter() {
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load chat history on mount
+  useEffect(() => {
+    async function fetchHistory() {
+      try {
+        const res = await fetch(`/api/history?sessionId=${sessionId}`);
+        const data = await res.json();
+        if (data.messages && data.messages.length > 0) {
+          setMessages(data.messages.map((m: {role: string; content: string}, i: number) => ({
+            id: `history-${i}`,
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+          })));
+        } else {
+          setMessages([{ id: 'welcome', role: 'assistant', content: WELCOME }]);
+        }
+      } catch {
+        setMessages([{ id: 'welcome', role: 'assistant', content: WELCOME }]);
+      } finally {
+        setHistoryLoaded(true);
+      }
+    }
+    fetchHistory();
+  }, [sessionId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -183,7 +203,7 @@ export default function CasanovaCommandCenter() {
       </div>
 
       {/* Quick actions */}
-      {messages.length <= 1 && (
+      {historyLoaded && messages.length <= 1 && (
         <div className="px-4 pb-3 flex flex-wrap gap-2">
           {quickActions.map((action) => (
             <button
