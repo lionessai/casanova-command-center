@@ -19,7 +19,14 @@ export default function CasanovaCommandCenter() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sessionId] = useState(() => `casanova-${Date.now()}`);
+  const [sessionId] = useState(() => {
+    if (typeof window === 'undefined') return 'casanova-default';
+    const stored = localStorage.getItem('casanova-session-id');
+    if (stored) return stored;
+    const newId = `casanova-${Date.now()}`;
+    localStorage.setItem('casanova-session-id', newId);
+    return newId;
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
